@@ -1,16 +1,35 @@
 import numpy as np
 from snakebids import bids
 from snakebids.utils.snakemake_io import glob_wildcards
+from snakemake.io import get_wildcard_names
 
 
-mri_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
+
 seg_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-{atlas}_dseg.nii.gz' 
-seg_wildcards = {'subject':'{subject}','hemi':'{hemi}','atlas':'{atlas}'}
+
+#note: the wildcards in mri_path must be a subset of those in seg_path 
+mri_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
+
+
+
+#a kind of lightweight snakebids below:
+
+wildcard_names = list(get_wildcard_names(seg_path))
 
 #with glob_wildcards it seems we may need to always hard-code the choice of wildcards.. unless either snakebids is used, or modify glob_wildcards to return a dict..
-subjects,hemis,atlases = glob_wildcards(seg_path)
+segnamedtuple = glob_wildcards(seg_path)
+
+seg_zip_list = dict()
+seg_wildcards = dict()
+
+#populate the seg_zip_list and seg_wildcards:
+for name in wildcard_names:
+    seg_zip_list[name] = getattr(segnamedtuple, name)
+    seg_wildcards[name] = f'{{{name}}}'
 
 
+print(seg_zip_list)
+print(seg_wildcards)
 
 def get_coords(wildcards, input):
 
@@ -45,16 +64,15 @@ rule all:
         expand(
             bids(root='results',
                 suffix='montage.png',
-                opacity='{opacity}',
+                desc='{desc}',
                 start='{start}',
                 stop='{stop}',
                 slices='{slices}',
                 **seg_wildcards),
             zip,
-            subject=subjects,
-            hemi=hemis,
-            atlas=atlases,allow_missing=True),
-                opacity=['0','100'],
+            **seg_zip_list,
+            allow_missing=True),
+                desc='onoff',
                 start='-15',
                 stop='15',
                 slices=5
@@ -64,11 +82,39 @@ rule all_centroids:
     input:
         expand(bids(root='results',suffix='centroid.txt',**seg_wildcards),
             zip,
-            subject=subjects,
-            hemi=hemis,
-            atlas=atlases,allow_missing=True),
+            **seg_zip_list,
+            allow_missing=True),
+
+
+#TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
+
+rule montage_seg_with_mri:
+    input:
+        expand(
+            bids(root='results',
+            suffix='montage.png',
+            opacity='{opacity}',
+            start='{start}',
+            stop='{stop}',
+            slices='{slices}',
+            **seg_wildcards),
+                opacity=['0','100'],allow_missing=True)
+    params:
+        tile='1x2',
+        geometry=lambda wildcards: '{xdim}x600'.format(xdim=800*int(wildcards.slices))
+    output:
+            bids(root='results',
+            suffix='montage.png',
+            desc='onoff',
+            start='{start}',
+            stop='{stop}',
+            slices='{slices}',
+            **seg_wildcards),
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
         
+
  
 rule montage_coronals:
     input:
