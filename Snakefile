@@ -37,15 +37,11 @@ def get_coords(wildcards, input):
 rule all:
     input:
         expand(
-        expand(
             bids(root='results',
-                suffix='opacitymontage.png',
-                desc='{desc}',
+                suffix='viewmontage.png',
                 **seg_wildcards),
             zip,
-            **seg_zip_list,
-            allow_missing=True),
-                desc=config['slice_montages'].keys(),
+            **seg_zip_list
         )
 
 rule all_centroids:
@@ -58,7 +54,29 @@ rule all_centroids:
 
 #TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
 
+
+rule montage_views:
+    input:
+        expand(bids(root='results',
+            suffix='opacitymontage.png',
+            desc='{desc}',
+            **seg_wildcards),
+                desc=config['slice_montages'].keys(),
+                allow_missing=True)
+    params:
+        tile='1x2',
+        geometry="'1x1+0+0<'" 
+    output:
+        bids(root='results',
+            suffix='viewmontage.png',
+            **seg_wildcards),
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+   
+    
+
 rule montage_seg_with_mri:
+    """ stack up slice with no seg (opacity 0) over with seg (opacity 100)"""
     input:
         expand(
             bids(root='results',
@@ -154,13 +172,13 @@ rule gen_snap:
         hide_slices = get_hide_slices,
         zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom']
     output:
-        bids(root='results',suffix='snap.png',
+        temp(bids(root='results',suffix='snap.png',
                 x='{xoffset}',
                 y='{yoffset}',
                 z='{zoffset}',
                 desc='{desc}',
                 opacity='{opacity}',
-                **seg_wildcards)
+                **seg_wildcards))
     shell:
         "fsleyes render -of {output}"
         " --scene ortho"
