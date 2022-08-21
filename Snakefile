@@ -1,8 +1,15 @@
 import numpy as np
+from snakebids import bids
+from snakebids.utils.snakemake_io import glob_wildcards
 
-# to do:
-#  - use config file for other optoins (also maybe start stop, nslices too)
-#  - figure out best way to iterate over subject images
+
+mri_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
+seg_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-{atlas}_dseg.nii.gz' 
+seg_wildcards = {'subject':'{subject}','hemi':'{hemi}','atlas':'{atlas}'}
+
+#with glob_wildcards it seems we may need to always hard-code the choice of wildcards.. unless either snakebids is used, or modify glob_wildcards to return a dict..
+subjects,hemis,atlases = glob_wildcards(seg_path)
+
 
 
 def get_coords(wildcards, input):
@@ -21,8 +28,47 @@ def get_input_slices(wildcards):
     slices = int(wildcards.slices)
     yoffset=[f'{num}' for num in np.linspace(start,stop,slices)]
 
-    return expand('test_x0_y{y}_z0_opacity-{{opacity}}.png',y=yoffset)
+    return expand(
+                bids(root='results',suffix='snap.png',
+                x='{xoffset}',
+                y='{yoffset}',
+                z='{zoffset}',
+                opacity='{opacity}',
+                **seg_wildcards),
+                    xoffset='0',yoffset=yoffset,zoffset='0',
+                    allow_missing=True)
 
+
+rule all:
+    input:
+        expand(
+        expand(
+            bids(root='results',
+                suffix='montage.png',
+                opacity='{opacity}',
+                start='{start}',
+                stop='{stop}',
+                slices='{slices}',
+                **seg_wildcards),
+            zip,
+            subject=subjects,
+            hemi=hemis,
+            atlas=atlases,allow_missing=True),
+                opacity=['0','100'],
+                start='-15',
+                stop='15',
+                slices=5
+)
+
+rule all_centroids:
+    input:
+        expand(bids(root='results',suffix='centroid.txt',**seg_wildcards),
+            zip,
+            subject=subjects,
+            hemi=hemis,
+            atlas=atlases,allow_missing=True),
+
+        
  
 rule montage_coronals:
     input:
@@ -31,39 +77,46 @@ rule montage_coronals:
         tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
         geometry='800x600'
     output:
-        'test_montage_coronal_linspace_{start}_{stop}_{slices}_opacity-{opacity}.png'
+        bids(root='results',
+            suffix='montage.png',
+            opacity='{opacity}',
+            start='{start}',
+            stop='{stop}',
+            slices='{slices}',
+            **seg_wildcards)
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
 rule get_slice_centroid:
     input:
-        '/local/scratch/hippunfold-fs-ashs-comparison/hippunfold_highresT2/hippunfold/sub-9992517/anat/sub-9992517_hemi-L_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz'
+        seg = seg_path.format(**seg_wildcards),
     output:
-        'centroid.txt'
+        centroid = bids(root='results',suffix='centroid.txt',**seg_wildcards),
     shell:
-        'fslstats  /local/scratch/hippunfold-fs-ashs-comparison/hippunfold_highresT2/hippunfold/sub-9992517/anat/sub-9992517_hemi-L_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz -c > {output}'
+        'fslstats  {input} -c > {output}'
 
 
 rule gen_snap:
     """ generates a snapshot with location relative to centroid of the segmentation """
     input:
-        mri = '/local/scratch/hippunfold-fs-ashs-comparison/hippunfold_highresT2/hippunfold/sub-9992517/anat/sub-9992517_hemi-L_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz',
-        " --displaySpace /local/scratch/hippunfold-fs-ashs-comparison/hippunfold_highresT2/hippunfold/sub-9992517/anat/sub-9992517_desc-preproc_T2w.nii.gz"
-        seg = '/local/scratch/hippunfold-fs-ashs-comparison/hippunfold_highresT2/hippunfold/sub-9992517/anat/sub-9992517_hemi-L_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz',
-        centroid = 'centroid.txt'
+        mri = mri_path.format(**seg_wildcards),
+        seg = seg_path.format(**seg_wildcards),
+        centroid = bids(root='results',suffix='centroid.txt',**seg_wildcards),
     params:
         coords = get_coords,
         label_opacity = '{opacity}'
     output:
-        'test_x{xoffset}_y{yoffset}_z{zoffset}_opacity-{opacity}.png'
+        bids(root='results',suffix='snap.png',
+                x='{xoffset}',
+                y='{yoffset}',
+                z='{zoffset}',
+                opacity='{opacity}',
+                **seg_wildcards)
     shell:
         "fsleyes render -of {output}"
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
-        " --xcentre  0.03418 -0.22980"
-        " --ycentre  0.35016 -0.26185"
-        " --zcentre  0.31203  0.03418"
         " --xzoom 2386.6666666666665"
         " --yzoom 2386.6666666666665"
         " --zzoom 2386.6666666666665"
