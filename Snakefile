@@ -4,20 +4,15 @@ from snakebids.utils.snakemake_io import glob_wildcards
 from snakemake.io import get_wildcard_names
 
 
-
-seg_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-{atlas}_dseg.nii.gz' 
-
-#note: the wildcards in mri_path must be a subset of those in seg_path 
-mri_path = '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
-
-
+configfile: 'config_hippunfold.yml'
 
 #a kind of lightweight snakebids below:
 
-wildcard_names = list(get_wildcard_names(seg_path))
+
+wildcard_names = list(get_wildcard_names(config['seg_path']))
 
 #with glob_wildcards it seems we may need to always hard-code the choice of wildcards.. unless either snakebids is used, or modify glob_wildcards to return a dict..
-segnamedtuple = glob_wildcards(seg_path)
+segnamedtuple = glob_wildcards(config['seg_path'])
 
 seg_zip_list = dict()
 seg_wildcards = dict()
@@ -28,8 +23,6 @@ for name in wildcard_names:
     seg_wildcards[name] = f'{{{name}}}'
 
 
-print(seg_zip_list)
-print(seg_wildcards)
 
 def get_coords(wildcards, input):
 
@@ -40,43 +33,20 @@ def get_coords(wildcards, input):
     return f'{x} {y} {z}'
 
 
-def get_input_slices(wildcards):
-
-    start = float(wildcards.start)
-    stop = float(wildcards.stop)
-    slices = int(wildcards.slices)
-    yoffset=[f'{num}' for num in np.linspace(start,stop,slices)]
-
-    return expand(
-                bids(root='results',suffix='snap.png',
-                x='{xoffset}',
-                y='{yoffset}',
-                z='{zoffset}',
-                opacity='{opacity}',
-                **seg_wildcards),
-                    xoffset='0',yoffset=yoffset,zoffset='0',
-                    allow_missing=True)
-
 
 rule all:
     input:
         expand(
         expand(
             bids(root='results',
-                suffix='montage.png',
+                suffix='opacitymontage.png',
                 desc='{desc}',
-                start='{start}',
-                stop='{stop}',
-                slices='{slices}',
                 **seg_wildcards),
             zip,
             **seg_zip_list,
             allow_missing=True),
-                desc='onoff',
-                start='-15',
-                stop='15',
-                slices=5
-)
+                desc=config['slice_montages'].keys(),
+        )
 
 rule all_centroids:
     input:
@@ -92,70 +62,103 @@ rule montage_seg_with_mri:
     input:
         expand(
             bids(root='results',
-            suffix='montage.png',
+            suffix='slicemontage.png',
+            desc='{desc}',
             opacity='{opacity}',
-            start='{start}',
-            stop='{stop}',
-            slices='{slices}',
             **seg_wildcards),
                 opacity=['0','100'],allow_missing=True)
     params:
         tile='1x2',
-        geometry=lambda wildcards: '{xdim}x600'.format(xdim=800*int(wildcards.slices))
+        geometry="'1x1+0+0<'"
     output:
             bids(root='results',
-            suffix='montage.png',
-            desc='onoff',
-            start='{start}',
-            stop='{stop}',
-            slices='{slices}',
+            suffix='opacitymontage.png',
+            desc='{desc}',
             **seg_wildcards),
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
         
+def get_input_slices(wildcards):
+
+    offset = dict()
+    for ax in ['x','y','z']:
+    
+        start = config['slice_montages'][wildcards.desc][ax]['start']
+        stop = config['slice_montages'][wildcards.desc][ax]['stop']
+        slices = config['slice_montages'][wildcards.desc][ax]['slices']
+        offset[ax] = [f'{num}' for num in np.linspace(start,stop,slices)]
+
+    return expand(
+                bids(root='results',suffix='snap.png',
+                x='{x}',
+                y='{y}',
+                z='{z}',
+                desc='{desc}',
+                opacity='{opacity}',
+                **seg_wildcards),
+                    x=offset['x'],
+                    y=offset['y'],
+                    z=offset['z'],
+                    allow_missing=True)
+
 
  
-rule montage_coronals:
+rule montage_slices:
     input:
-        slices = get_input_slices 
+        slices = get_input_slices
     params:
         tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
         geometry='800x600'
     output:
         bids(root='results',
-            suffix='montage.png',
+            suffix='slicemontage.png',
+            desc='{desc}',
             opacity='{opacity}',
-            start='{start}',
-            stop='{stop}',
-            slices='{slices}',
             **seg_wildcards)
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
 rule get_slice_centroid:
     input:
-        seg = seg_path.format(**seg_wildcards),
+        seg = config['seg_path'].format(**seg_wildcards),
     output:
         centroid = bids(root='results',suffix='centroid.txt',**seg_wildcards),
     shell:
         'fslstats  {input} -c > {output}'
 
 
+def get_hide_slices(wildcards):
+    if wildcards.desc == 'coronal':
+        return '--hidex --hidez'
+    if wildcards.desc == 'axial':
+        return '--hidex --hidey'
+    if wildcards.desc == 'sagittal':
+        return '--hidey --hidez'
+
+
+
+        
+    
+
 rule gen_snap:
     """ generates a snapshot with location relative to centroid of the segmentation """
     input:
-        mri = mri_path.format(**seg_wildcards),
-        seg = seg_path.format(**seg_wildcards),
+        mri = config['mri_path'].format(**seg_wildcards),
+        seg = config['seg_path'].format(**seg_wildcards),
         centroid = bids(root='results',suffix='centroid.txt',**seg_wildcards),
     params:
         coords = get_coords,
-        label_opacity = '{opacity}'
+        label_opacity = '{opacity}',
+        lut = config['lut'],
+        hide_slices = get_hide_slices,
+        zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom']
     output:
         bids(root='results',suffix='snap.png',
                 x='{xoffset}',
                 y='{yoffset}',
                 z='{zoffset}',
+                desc='{desc}',
                 opacity='{opacity}',
                 **seg_wildcards)
     shell:
@@ -163,12 +166,11 @@ rule gen_snap:
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
-        " --xzoom 2386.6666666666665"
-        " --yzoom 2386.6666666666665"
-        " --zzoom 2386.6666666666665"
+        " --xzoom {params.zoom}"
+        " --yzoom {params.zoom}"
+        " --zzoom {params.zoom}"
         " --layout horizontal"
-        " --hidex"
-        " --hidez"
+        " {params.hide_slices}"
         " --hideCursor"
         " --hideLabels"
         " --bgColour 0.0 0.0 0.0"
@@ -206,7 +208,7 @@ rule gen_snap:
         " --alpha {params.label_opacity}"
         " --brightness 49.75000000000001"
         " --contrast 49.90029860765409"
-        " --lut random"
+        " --lut {params.lut}" #random"
         " --outlineWidth 0"
         " --volume 0"
 
