@@ -204,7 +204,7 @@ rule montage_slices:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
 
-hemi_standardize = {'left': 'L', 'right': 'R', 'L': 'L', 'R':'R'}
+hemi_standardize = {'left': 'L', 'right': 'R', 'lh':'L', 'rh':'R','L': 'L', 'R':'R'}
 
 def get_seg_ref(wildcards):
     hemi = hemi_standardize[wildcards.hemi]
@@ -255,11 +255,11 @@ rule gen_snap:
         mri = config['mri_path'].format(**seg_wildcards),
         seg = config['seg_path'].format(**seg_wildcards),
         centroid = get_centroid_txt,
-        vox2ras = get_vox2ras_txt
+        vox2ras = get_vox2ras_txt,
+        lut = config['lut'],
     params:
         coords = get_coords,
         label_opacity = '{opacity}',
-        lut = config['lut'],
         hide_slices = get_hide_slices,
         zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom']
     output:
@@ -317,7 +317,7 @@ rule gen_snap:
         " --alpha {params.label_opacity}"
         " --brightness 49.75000000000001"
         " --contrast 49.90029860765409"
-        " --lut {params.lut}" #random"
+        " --lut {input.lut}" #random"
         " --outlineWidth 0"
         " --volume 0"
 
