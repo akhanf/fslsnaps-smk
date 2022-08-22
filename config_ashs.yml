@@ -1,0 +1,42 @@
+mri_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
+seg_path: '../{method}/sub-{subject}/final/{subject}_{hemi}_lfseg_corr_nogray.nii.gz'
+
+# we use np.linspace to get the slices to use
+#start and stop are floats in mm, relative to the centroid of the entire segmentation
+#slices are integers
+
+slice_montages:
+  coronal:
+    zoom: 2300
+    x:
+      start: 0 
+      stop: 0
+      slices: 1
+    y:
+      start: -15 
+      stop: +15
+      slices: 5
+    z:
+      start: 0
+      stop: 0
+      slices: 1
+  sagittal:
+    zoom: 1800
+    x:
+      start: -8
+      stop: +8
+      slices: 5
+    y:
+      start: -10
+      stop: -10
+      slices: 1
+    z:
+      start: 0
+      stop: 0
+      slices: 1
+
+
+
+
+
+lut: 'resources/ashs.lut'
