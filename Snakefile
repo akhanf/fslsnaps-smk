@@ -55,6 +55,34 @@ rule all_centroids:
 #TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
 
 
+
+#output rule needs seg_wildcards with hemi removed
+seg_wildcards_nohemi = seg_wildcards.copy()
+del seg_wildcards_nohemi['hemi']
+
+rule montage_hemis:
+    """ stack these left to right. removes the hemi wildcard -- doesn't look great though.."""
+
+    input: 
+        expand(bids(root='results',
+            suffix='viewmontage.png',
+            **seg_wildcards),
+            hemi=['R','L'],allow_missing=True)
+    output:
+        bids(root='results',
+            suffix='hemimontage.png',
+            **seg_wildcards_nohemi)
+    params:
+        tile='2x1',
+        geometry="'1x1+0+0<'" 
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+   
+ 
+
+
+
+
 rule montage_views:
     input:
         expand(bids(root='results',
