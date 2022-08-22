@@ -1,10 +1,18 @@
 mri_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
 seg_path: '../{method}/sub-{subject}/final/{subject}_{hemi}_lfseg_corr_nogray.nii.gz'
 
+lut: 'resources/ashs.lut'
+
+
+#for calculating centroid, vox2ras, and setting slices -- use this to match exact slices
+seg_ref_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
+
 # we use np.linspace to get the slices to use
-#start and stop are floats in mm, relative to the centroid of the entire segmentation
+#start and stop are in "voxels", relative to the centroid of the entire segmentation (voxel space of the segmentation)
 #slices are integers
 
+#ideally would want extents of segmentation, and just pick number of slices --
+ 
 slice_montages:
   coronal:
     zoom: 2300
@@ -13,9 +21,9 @@ slice_montages:
       stop: 0
       slices: 1
     y:
-      start: -15 
-      stop: +15
-      slices: 5
+      start: -40 
+      stop: +40
+      slices: 10
     z:
       start: 0
       stop: 0
@@ -23,12 +31,12 @@ slice_montages:
   sagittal:
     zoom: 1800
     x:
-      start: -8
-      stop: +8
-      slices: 5
+      start: -40
+      stop: +40
+      slices: 10
     y:
-      start: -10
-      stop: -10
+      start: 0
+      stop: 0
       slices: 1
     z:
       start: 0
@@ -39,4 +47,4 @@ slice_montages:
 
 
 
-lut: 'resources/ashs.lut'
+
