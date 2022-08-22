@@ -271,7 +271,7 @@ rule gen_snap:
                 opacity='{opacity}',
                 **seg_wildcards))
     shell:
-        "fsleyes render -of {output}"
+        "xvfb-run -a fsleyes render -of {output}"
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
