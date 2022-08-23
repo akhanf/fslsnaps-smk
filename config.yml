@@ -10,6 +10,7 @@ method: 'hippunfold' #can override with CLI:  --config method=ashs
 #ideally would want extents of segmentation, and just pick number of slices --
 
 opacity: '50'
+size: '200 150'
 
 slice_montages:
   coronal:

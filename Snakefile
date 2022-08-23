@@ -261,6 +261,7 @@ rule gen_snap:
         vox2ras = get_vox2ras_txt,
         lut = config['lut'],
     params:
+        img_size = config['size'],
         coords = get_coords,
         label_opacity = '{opacity}',
         hide_slices = get_hide_slices,
@@ -275,6 +276,7 @@ rule gen_snap:
                 **seg_wildcards))
     shell:
         "xvfb-run -a fsleyes render -of {output}"
+        " --size {params.img_size}"
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
