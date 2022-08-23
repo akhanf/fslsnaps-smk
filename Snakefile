@@ -4,7 +4,10 @@ from snakebids.utils.snakemake_io import glob_wildcards
 from snakemake.io import get_wildcard_names
 
 
-configfile: 'config_hippunfold.yml'
+configfile: 'config.yml'
+
+method_config='config_{method}.yml'.format(method=config['method'])
+configfile: method_config
 
 #a kind of lightweight snakebids below:
 wildcard_constraints:
@@ -130,7 +133,7 @@ rule montage_views:
                 desc=config['slice_montages'].keys(),
                 allow_missing=True)
     params:
-        tile='1x2',
+        tile=lambda wildcards, input: '1x{N}'.format(N=len(input)),
         geometry="'1x1+0+0<'" 
     output:
         bids(root='results',
@@ -150,9 +153,9 @@ rule montage_seg_with_mri:
             desc='{desc}',
             opacity='{opacity}',
             **seg_wildcards),
-                opacity=['0','100'],allow_missing=True)
+                opacity=['0',config['opacity']],allow_missing=True)
     params:
-        tile='1x2',
+        tile=lambda wildcards, input: '1x{N}'.format(N=len(input)),
         geometry="'1x1+0+0<'"
     output:
             bids(root='results',
@@ -193,7 +196,7 @@ rule montage_slices:
         slices = get_input_slices
     params:
         tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
-        geometry='800x600'
+        geometry="'1x1+0+0<'" 
     output:
         bids(root='results',
             suffix='slicemontage.png',
@@ -317,7 +320,7 @@ rule gen_snap:
         " --alpha {params.label_opacity}"
         " --brightness 49.75000000000001"
         " --contrast 49.90029860765409"
-        " --lut {input.lut}" #random"
+        " --lut {input.lut}" 
         " --outlineWidth 0"
         " --volume 0"
 

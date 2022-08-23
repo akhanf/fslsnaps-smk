@@ -1,0 +1,63 @@
+#for calculating centroid, vox2ras, and setting slices -- use this to match exact slices
+seg_ref_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
+
+method: 'hippunfold' #can override with CLI:  --config method=ashs 
+
+# we use np.linspace to get the slices to use
+#start and stop are in "voxels", relative to the centroid of the entire segmentation (voxel space of the segmentation)
+#slices are integers
+
+#ideally would want extents of segmentation, and just pick number of slices --
+
+opacity: '50'
+
+slice_montages:
+  coronal:
+    zoom: 2200
+    x:
+      start: 0 
+      stop: 0
+      slices: 1
+    y:
+      start: -30 
+      stop: +30
+      slices: 5
+    z:
+      start: 0
+      stop: 0
+      slices: 1
+  sagittal:
+    zoom: 2000
+    x:
+      start: -30
+      stop: +30
+      slices: 5
+    y:
+      start: 0
+      stop: 0
+      slices: 1
+    z:
+      start: 0
+      stop: 0
+      slices: 1
+  axial:
+    zoom: 1800
+    x:
+      start: 0
+      stop: 0
+      slices: 1
+    y:
+      start: 0
+      stop: 0
+      slices: 1
+    z:
+      start: -30
+      stop: +30
+      slices: 5
+
+
+
+
+
+
+
