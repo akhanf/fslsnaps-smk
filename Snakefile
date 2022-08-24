@@ -2,12 +2,13 @@ import numpy as np
 from snakebids import bids
 from snakebids.utils.snakemake_io import glob_wildcards
 from snakemake.io import get_wildcard_names
-
+from snakebids import filter_list
 
 configfile: 'config.yml'
 
 method_config='config_{method}.yml'.format(method=config['method'])
 configfile: method_config
+
 
 #a kind of lightweight snakebids below:
 wildcard_constraints:
@@ -70,16 +71,15 @@ def get_coords(wildcards, input):
     return coords_string
 
 
-
 rule all:
     input:
-        expand(
-            bids(root='results',
-                suffix='viewmontage.png',
-                **seg_wildcards),
-            zip,
-            **seg_zip_list
-        )
+        expand(bids(root='results',
+                suffix='flipbook.pdf',
+                hemi='{hemi}',
+                method='{method}',
+                include_subject_dir=False),
+            hemi=list(set(seg_zip_list['hemi'])),
+            method=list(set(seg_zip_list['method'])))
 
 rule all_centroid:
     input:
@@ -91,6 +91,30 @@ rule all_centroid:
             zip,
             **seg_ref_zip_list,
             allow_missing=True),
+
+
+
+#combine into pdfs for flipping through -- same hemi and method 
+
+rule create_pdf:
+    input:
+        lambda wildcards: expand(
+            bids(root='results',
+                suffix='viewmontage.png',
+                **seg_wildcards),
+            zip,
+            **filter_list(seg_zip_list,wildcards)
+        )
+    output:
+        bids(root='results',
+                suffix='flipbook.pdf',
+                hemi='{hemi}',
+                method='{method}',
+                include_subject_dir=False)
+    shell:
+        'convert {input} {output}'
+
+
 
 
 #TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
@@ -139,8 +163,11 @@ rule montage_views:
         bids(root='results',
             suffix='viewmontage.png',
             **seg_wildcards),
+    shadow: 'minimal'
     shell:
-        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+        "montage {input}  -geometry {params.geometry} -tile {params.tile} temp.png && " 
+        "convert temp.png -background black -gravity North -splice 0x40 -fill white -pointsize 30 -annotate +0+2 '{wildcards}'"
+         " {output}"
    
     
 
