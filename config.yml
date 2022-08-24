@@ -1,5 +1,5 @@
 #for calculating centroid, vox2ras, and setting slices -- use this to match exact slices
-seg_ref_path: '../hippunfold_MP2RAGE/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT1w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
+seg_ref_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
 
 method: 'hippunfold' #can override with CLI:  --config method=ashs 
 
