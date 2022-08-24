@@ -11,6 +11,7 @@ method: 'hippunfold' #can override with CLI:  --config method=ashs
 
 opacity: '50'
 size: '200 150'
+displayrange_percentiles: '5 95'
 
 slice_montages:
   coronal:

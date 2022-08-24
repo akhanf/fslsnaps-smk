@@ -264,6 +264,7 @@ rule gen_snap:
         img_size = config['size'],
         coords = get_coords,
         label_opacity = '{opacity}',
+        displayrange = config['displayrange_percentiles'],
         hide_slices = get_hide_slices,
         zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom']
     output:
@@ -277,6 +278,7 @@ rule gen_snap:
     shell:
         "xvfb-run -a fsleyes render -of {output}"
         " --size {params.img_size}"
+        " --initialDisplayRange {params.displayrange}"
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
@@ -299,13 +301,8 @@ rule gen_snap:
         " --name 'mri'"
         " --overlayType volume"
         " --alpha 100.0"
-        " --brightness 61.692289455328854"
-        " --contrast 73.38457891065771"
         " --cmap greyscale"
         " --negativeCmap greyscale"
-        " --displayRange 0.0 700.0"
-        " --clippingRange 0.0 1328.1773706054687"
-        " --modulateRange 0.0 1315.027099609375"
         " --gamma 0.0"
         " --cmapResolution 256"
         " --interpolation spline"
@@ -320,8 +317,6 @@ rule gen_snap:
         " --name 'seg'"
         " --overlayType label"
         " --alpha {params.label_opacity}"
-        " --brightness 49.75000000000001"
-        " --contrast 49.90029860765409"
         " --lut {input.lut}" 
         " --outlineWidth 0"
         " --volume 0"
