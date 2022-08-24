@@ -209,7 +209,7 @@ hemi_standardize = {'left': 'L', 'right': 'R', 'lh':'L', 'rh':'R','L': 'L', 'R':
 
 def get_seg_ref(wildcards):
     hemi = hemi_standardize[wildcards.hemi]
-    return config['seg_ref_path'].format(hemi=hemi,subject=wildcards.subject)
+    return inputs['seg'].input_path.format(hemi=hemi,subject=wildcards.subject)
 
 rule get_slice_centroid:
     input:
