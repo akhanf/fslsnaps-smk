@@ -80,14 +80,14 @@ rule all_centroid:
 
 def get_inputs_create_pdf(wildcards):
     
-    pngs = expand(
+    pngs = sorted(expand(
                     bids(root='results',
                         suffix='viewmontage.png',
                         method='{method}'.format(method=wildcards.method),
                         **inputs['seg'].input_wildcards),
                     zip,
                     **filter_list(inputs['seg'].input_zip_lists,wildcards)
-                    )
+                    ))
     return pngs
             
 
@@ -95,6 +95,7 @@ def get_inputs_create_pdf(wildcards):
 rule create_pdf:
     input:
         get_inputs_create_pdf
+
     output:
         bids(root='results',
                 suffix='flipbook.pdf',
