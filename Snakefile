@@ -3,39 +3,22 @@ from snakebids import bids
 from snakebids.utils.snakemake_io import glob_wildcards
 from snakemake.io import get_wildcard_names
 from snakebids import filter_list
+from snakebids import generate_inputs
+from snakebids import get_wildcard_constraints
 
-configfile: 'config.yml'
+configfile: 'config/config.yml'
 
-method_config='config_{method}.yml'.format(method=config['method'])
-configfile: method_config
+inputs = generate_inputs(bids_dir=config['bids_dir'],
+                                    pybids_inputs=config['pybids_inputs'],
+                                    use_bids_inputs=True)
 
 
-#a kind of lightweight snakebids below:
+
+#add in wildcard constraints
+wildcard_constraints: **get_wildcard_constraints(config['pybids_inputs'])
+
 wildcard_constraints:
     method='[a-zA-Z0-9]+',
-    hemi='[a-zA-Z0-9]+',
-    subject='[a-zA-Z0-9]+'
-
-def get_zip_list_and_wildcards(seg_path):
-    wildcard_names = list(get_wildcard_names(seg_path))
-
-    #with glob_wildcards it seems we may need to always hard-code the choice of wildcards.. unless either snakebids is used, or modify glob_wildcards to return a dict..
-    segnamedtuple = glob_wildcards(seg_path)
-
-    seg_zip_list = dict()
-    seg_wildcards = dict()
-
-    #populate the seg_zip_list and seg_wildcards:
-    for name in wildcard_names:
-        seg_zip_list[name] = getattr(segnamedtuple, name)
-        seg_wildcards[name] = f'{{{name}}}'
-
-    return (seg_zip_list, seg_wildcards)
-
-
-(seg_zip_list,seg_wildcards) = get_zip_list_and_wildcards(config['seg_path'])
-(seg_ref_zip_list,seg_ref_wildcards) = get_zip_list_and_wildcards(config['seg_ref_path'])
-
 
 
 def get_coords(wildcards, input):
@@ -78,33 +61,40 @@ rule all:
                 hemi='{hemi}',
                 method='{method}',
                 include_subject_dir=False),
-            hemi=list(set(seg_zip_list['hemi'])),
-            method=list(set(seg_zip_list['method'])))
+            hemi=inputs['seg'].input_lists['hemi'],
+            method=config['method'])
 
 rule all_centroid:
     input:
-        expand(bids(root='results',suffix='centroid.txt',**seg_ref_wildcards),
+        expand(bids(root='results',suffix='centroid.txt',**inputs['seg'].input_wildcards),
             zip,
-            **seg_ref_zip_list,
+            **inputs['seg'].input_zip_lists,
             allow_missing=True),
-        expand(bids(root='results',suffix='vox2ras.txt',**seg_ref_wildcards),
+        expand(bids(root='results',suffix='vox2ras.txt',**inputs['seg'].input_wildcards),
             zip,
-            **seg_ref_zip_list,
+            **inputs['seg'].input_zip_lists,
             allow_missing=True),
-
 
 
 #combine into pdfs for flipping through -- same hemi and method 
 
+def get_inputs_create_pdf(wildcards):
+    
+    pngs = expand(
+                    bids(root='results',
+                        suffix='viewmontage.png',
+                        method='{method}'.format(method=wildcards.method),
+                        **inputs['seg'].input_wildcards),
+                    zip,
+                    **filter_list(inputs['seg'].input_zip_lists,wildcards)
+                    )
+    return pngs
+            
+
+
 rule create_pdf:
     input:
-        lambda wildcards: expand(
-            bids(root='results',
-                suffix='viewmontage.png',
-                **seg_wildcards),
-            zip,
-            **filter_list(seg_zip_list,wildcards)
-        )
+        get_inputs_create_pdf
     output:
         bids(root='results',
                 suffix='flipbook.pdf',
@@ -121,31 +111,6 @@ rule create_pdf:
 
 
 
-#output rule needs seg_wildcards with hemi removed
-#seg_wildcards_nohemi = seg_wildcards.copy()
-#del seg_wildcards_nohemi['hemi']
-
-#rule montage_hemis:
-#    """ stack these left to right. removes the hemi wildcard -- doesn't look great though.."""
-#
-#    input: 
-#        expand(bids(root='results',
-#            suffix='viewmontage.png',
-#            **seg_wildcards),
-#            hemi=['R','L'],allow_missing=True)
-#    output:
-#        bids(root='results',
-#            suffix='hemimontage.png',
-#            **seg_wildcards_nohemi)
-#    params:
-#        tile='2x1',
-#        geometry="'1x1+0+0<'" 
-#    shell:
-#        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
-   
- 
-
-
 
 
 rule montage_views:
@@ -153,7 +118,8 @@ rule montage_views:
         expand(bids(root='results',
             suffix='opacitymontage.png',
             desc='{desc}',
-            **seg_wildcards),
+            method='{method}',
+            **inputs['seg'].input_wildcards),
                 desc=config['slice_montages'].keys(),
                 allow_missing=True)
     params:
@@ -162,7 +128,8 @@ rule montage_views:
     output:
         bids(root='results',
             suffix='viewmontage.png',
-            **seg_wildcards),
+            method='{method}',
+            **inputs['seg'].input_wildcards),
     shadow: 'minimal'
     shell:
         "montage {input}  -geometry {params.geometry} -tile {params.tile} temp.png && " 
@@ -179,7 +146,8 @@ rule montage_seg_with_mri:
             suffix='slicemontage.png',
             desc='{desc}',
             opacity='{opacity}',
-            **seg_wildcards),
+            method='{method}',
+            **inputs['seg'].input_wildcards),
                 opacity=['0',config['opacity']],allow_missing=True)
     params:
         tile=lambda wildcards, input: '1x{N}'.format(N=len(input)),
@@ -188,7 +156,8 @@ rule montage_seg_with_mri:
             bids(root='results',
             suffix='opacitymontage.png',
             desc='{desc}',
-            **seg_wildcards),
+            method='{method}',
+            **inputs['seg'].input_wildcards),
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
@@ -210,7 +179,8 @@ def get_input_slices(wildcards):
                 z='{z}',
                 desc='{desc}',
                 opacity='{opacity}',
-                **seg_wildcards),
+                method='{method}',
+                **inputs['seg'].input_wildcards),
                     x=offset['x'],
                     y=offset['y'],
                     z=offset['z'],
@@ -229,7 +199,8 @@ rule montage_slices:
             suffix='slicemontage.png',
             desc='{desc}',
             opacity='{opacity}',
-            **seg_wildcards)
+            method='{method}',
+            **inputs['seg'].input_wildcards)
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
@@ -244,7 +215,7 @@ rule get_slice_centroid:
     input:
         seg = get_seg_ref,
     output:
-        centroid = bids(root='results',suffix='centroid.txt',**seg_ref_wildcards)
+        centroid = bids(root='results',suffix='centroid.txt',**inputs['seg'].input_wildcards)
     shell:
         'fslstats  {input} -c > {output}'
 
@@ -252,7 +223,7 @@ rule get_vox_to_ras:
     input:
         seg = get_seg_ref,
     output:
-        vox2ras = bids(root='results',suffix='vox2ras.txt',**seg_ref_wildcards),
+        vox2ras = bids(root='results',suffix='vox2ras.txt',**inputs['seg'].input_wildcards),
     shell:
         'fslorient -getqform {input} > {output}'
 
@@ -269,12 +240,12 @@ def get_hide_slices(wildcards):
 
 def get_centroid_txt(wildcards):
     hemi = hemi_standardize[wildcards.hemi]
-    return bids(root='results',suffix='centroid.txt',**seg_ref_wildcards).format(hemi=hemi,subject=wildcards.subject)
+    return bids(root='results',suffix='centroid.txt',**inputs['seg'].input_wildcards).format(hemi=hemi,subject=wildcards.subject)
 
 
 def get_vox2ras_txt(wildcards):
     hemi = hemi_standardize[wildcards.hemi]
-    return bids(root='results',suffix='vox2ras.txt',**seg_ref_wildcards).format(hemi=hemi,subject=wildcards.subject)
+    return bids(root='results',suffix='vox2ras.txt',**inputs['seg'].input_wildcards).format(hemi=hemi,subject=wildcards.subject)
 
        
     
@@ -282,8 +253,8 @@ def get_vox2ras_txt(wildcards):
 rule gen_snap:
     """ generates a snapshot with location relative to centroid of the segmentation """
     input:
-        mri = config['mri_path'].format(**seg_wildcards),
-        seg = config['seg_path'].format(**seg_wildcards),
+        mri = inputs['mri'].input_path.format(**inputs['seg'].input_wildcards),
+        seg = inputs['seg'].input_path.format(**inputs['seg'].input_wildcards),
         centroid = get_centroid_txt,
         vox2ras = get_vox2ras_txt,
         lut = config['lut'],
@@ -301,7 +272,8 @@ rule gen_snap:
                 z='{zoffset}',
                 desc='{desc}',
                 opacity='{opacity}',
-                **seg_wildcards))
+                method='{method}',
+                **inputs['seg'].input_wildcards))
     shell:
         "xvfb-run -a fsleyes render -of {output}"
         " --size {params.img_size}"
