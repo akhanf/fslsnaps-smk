@@ -98,13 +98,13 @@ rule all_centroid:
 
 rule create_pdf:
     input:
-        lambda wildcards: expand(
+        lambda wildcards: sorted(expand(
             bids(root='results',
                 suffix='viewmontage.png',
                 **seg_wildcards),
             zip,
             **filter_list(seg_zip_list,wildcards)
-        )
+        ))
     output:
         bids(root='results',
                 suffix='flipbook.pdf',
