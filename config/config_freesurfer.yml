@@ -1,8 +1,8 @@
 bids_dir: '../hippunfold_highresT2/hippunfold' # only used if custom_path is not provided below for each file
 
 
-method: 'hippunfold' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
-lut: 'resources/hippunfold.lut'
+method: 'freesurfer' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
+lut: 'resources/freesurfer.lut'
 
 
 pybids_inputs:
@@ -26,7 +26,7 @@ pybids_inputs:
       - session
       - hemi
     custom_path:
-      '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
+      '../freesurfer/sub-{subject}/mri/{hemi}.hippoAmygLabels-T2.v21.FS60.space-T2w.nii.gz'
 
 
 # we use np.linspace to get the slices to use
@@ -38,7 +38,6 @@ pybids_inputs:
 opacity: '100'
 size: '200 150'
 displayrange_percentiles: '5 95'
-
 
 
 slice_montages:
@@ -60,5 +59,4 @@ slice_montages:
     start: -30
     stop: +30
     slices: 5
-
 
