@@ -165,14 +165,30 @@ rule montage_seg_with_mri:
         
 def get_input_slices(wildcards):
 
-    offset = dict()
-    for ax in ['x','y','z']:
     
-        start = config['slice_montages'][wildcards.desc][ax]['start']
-        stop = config['slice_montages'][wildcards.desc][ax]['stop']
-        slices = config['slice_montages'][wildcards.desc][ax]['slices']
-        offset[ax] = [f'{num}' for num in np.linspace(start,stop,slices)]
+       
+    
+    start = config['slice_montages'][wildcards.desc]['start']
+    stop = config['slice_montages'][wildcards.desc]['stop']
+    slices = config['slice_montages'][wildcards.desc]['slices']
+    offset = [f'{num}' for num in np.linspace(start,stop,slices)]
 
+    ax = config['slice_montages'][wildcards.desc]['axis']
+
+    if ax == 'x':
+        x = offset
+        y = 0
+        z = 0
+    elif ax == 'y':
+        x = 0
+        y = offset
+        z = 0
+    elif ax == 'z':
+        x = 0
+        y = 0
+        z = offset
+
+   
     return expand(
                 bids(root='results',suffix='snap.png',
                 x='{x}',
@@ -182,9 +198,9 @@ def get_input_slices(wildcards):
                 opacity='{opacity}',
                 method='{method}',
                 **inputs['seg'].input_wildcards),
-                    x=offset['x'],
-                    y=offset['y'],
-                    z=offset['z'],
+                    x=x,
+                    y=y,
+                    z=z,
                     allow_missing=True)
 
 
@@ -231,13 +247,14 @@ rule get_vox_to_ras:
 
 
 def get_hide_slices(wildcards):
-    if wildcards.desc == 'coronal':
-        return '--hidex --hidez'
-    if wildcards.desc == 'axial':
-        return '--hidex --hidey'
-    if wildcards.desc == 'sagittal':
-        return '--hidey --hidez'
+    ax = config['slice_montages'][wildcards.desc]['axis']
 
+    if ax == 'x':
+        return '--hidey --hidez'
+    elif ax == 'y':
+        return '--hidex --hidez'
+    elif ax == 'z':
+        return '--hidex --hidey'
 
 def get_centroid_txt(wildcards):
     hemi = hemi_standardize[wildcards.hemi]
