@@ -47,13 +47,12 @@ slice_montages:
   coronal:
     axis: 'y'
     zoom: 2200
-    start: -30
+    start: 0
     stop: +30
-    slices: 5
+    slices: 3
   sagittal:
     axis: 'x'
     zoom: 2000
-    start: -30
-    stop: +30
-    slices: 5
-
+    start: 0
+    stop: 0
+    slices: 1
