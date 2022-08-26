@@ -39,48 +39,24 @@ opacity: '100'
 size: '200 150'
 displayrange_percentiles: '5 95'
 
+
 slice_montages:
   coronal:
+    axis: 'y'
     zoom: 2200
-    x:
-      start: 0 
-      stop: 0
-      slices: 1
-    y:
-      start: -30 
-      stop: +30
-      slices: 5
-    z:
-      start: 0
-      stop: 0
-      slices: 1
-  sagittal:
-    zoom: 2000
-    x:
-      start: -30
-      stop: +30
-      slices: 5
-    y:
-      start: 0
-      stop: 0
-      slices: 1
-    z:
-      start: 0
-      stop: 0
-      slices: 1
+    start: -30
+    stop: +30
+    slices: 5
   axial:
+    axis: 'z'
     zoom: 1800
-    x:
-      start: 0
-      stop: 0
-      slices: 1
-    y:
-      start: 0
-      stop: 0
-      slices: 1
-    z:
-      start: -30
-      stop: +30
-      slices: 5
-
+    start: -30
+    stop: +30
+    slices: 5
+  sagittal:
+    axis: 'x'
+    zoom: 2000
+    start: -30
+    stop: +30
+    slices: 5
 
