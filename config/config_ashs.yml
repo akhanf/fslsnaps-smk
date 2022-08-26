@@ -1,7 +1,10 @@
 bids_dir: '../hippunfold_highresT2/hippunfold' # only used if custom_path is not provided below for each file
+participant_label: 
+  - '7607477'
 
 
-method: 'freesurfer' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
+
+method: 'ashs' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
 lut: 'resources/ashs.lut'
 
 
@@ -44,12 +47,6 @@ slice_montages:
   coronal:
     axis: 'y'
     zoom: 2200
-    start: -30
-    stop: +30
-    slices: 5
-  axial:
-    axis: 'z'
-    zoom: 1800
     start: -30
     stop: +30
     slices: 5

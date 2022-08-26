@@ -8,8 +8,12 @@ from snakebids import get_wildcard_constraints
 
 configfile: 'config/config.yml'
 
+
+
 inputs = generate_inputs(bids_dir=config['bids_dir'],
                                     pybids_inputs=config['pybids_inputs'],
+                                    participant_label=config.get("participant_label", None),
+                                    exclude_participant_label=config.get("exclude_participant_label", None),
                                     use_bids_inputs=True)
 
 
@@ -63,6 +67,8 @@ rule all:
                 include_subject_dir=False),
             hemi=inputs['seg'].input_lists['hemi'],
             method=config['method'])
+
+
 
 rule all_centroid:
     input:
@@ -162,6 +168,34 @@ rule montage_seg_with_mri:
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
+
+
+
+rule montage_views_single_row:
+    input:
+        expand(
+            bids(root='results',
+            suffix='slicemontage.png',
+            desc='{desc}',
+            opacity='{opacity}',
+            method='{method}',
+            **inputs['seg'].input_wildcards),
+                desc=config['slice_montages'].keys(),
+                allow_missing=True)
+    params:
+        tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
+        geometry="'1x1+0+0<'"
+ 
+    output:
+            bids(root='results',
+            suffix='viewrowmontage.png',
+            opacity='{opacity}',
+            method='{method}',
+            **inputs['seg'].input_wildcards),
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+
+ 
         
 def get_input_slices(wildcards):
 
