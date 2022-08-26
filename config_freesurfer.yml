@@ -1,5 +1,0 @@
-mri_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
-seg_path: '../{method}/sub-{subject}/mri/{hemi}.hippoAmygLabels-T2.v21.CA.space-T2w.nii.gz'
-lut: 'resources/freesurfer.lut'
-
-

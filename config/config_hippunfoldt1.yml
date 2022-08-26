@@ -1,7 +1,7 @@
 bids_dir: '../hippunfold_highresT2/hippunfold' # only used if custom_path is not provided below for each file
 
 
-method: 'hippunfold' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
+method: 'hippunfoldT1' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
 lut: 'resources/hippunfold.lut'
 
 
@@ -26,7 +26,7 @@ pybids_inputs:
       - session
       - hemi
     custom_path:
-      '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
+      '../hippunfold_atlasfix/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
 
 
 # we use np.linspace to get the slices to use

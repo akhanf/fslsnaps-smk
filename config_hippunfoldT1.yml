@@ -1,8 +1,0 @@
-mri_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
-seg_path: '{method}/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz' 
-
-lut: 'resources/hippunfold.lut'
-
-
-
-

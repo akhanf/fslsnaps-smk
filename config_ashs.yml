@@ -1,6 +1,0 @@
-mri_path: '../hippunfold_highresT2/hippunfold/sub-{subject}/anat/sub-{subject}_desc-preproc_T2w.nii.gz'
-seg_path: '../{method}/sub-{subject}/final/{subject}_{hemi}_lfseg_corr_nogray.nii.gz'
-
-lut: 'resources/ashs.lut'
-
-
