@@ -66,7 +66,7 @@ rule all:
                 method='{method}',
                 include_subject_dir=False),
             hemi=inputs['seg'].input_lists['hemi'],
-            method=config['method'])
+            method=config['segs'].keys())
 
 
 
@@ -301,15 +301,25 @@ def get_vox2ras_txt(wildcards):
 
        
     
+def get_seg(wildcards):
+
+    #convert the hemi wildcard
+    subject = wildcards.subject
+    method = wildcards.method
+    hemi = config['segs'][method]['hemi_convert'][wildcards.hemi]
+    #note: this function currently won't work if additional wildcards are used in the path
+
+    return config['segs'][method]['path'].format(subject=subject,method=method,hemi=hemi)
+
 
 rule gen_snap:
     """ generates a snapshot with location relative to centroid of the segmentation """
     input:
-        mri = inputs['mri'].input_path.format(**inputs['seg'].input_wildcards),
-        seg = inputs['seg'].input_path.format(**inputs['seg'].input_wildcards),
+        mri = inputs['mri'].input_path, 
+        seg = get_seg,
         centroid = get_centroid_txt,
         vox2ras = get_vox2ras_txt,
-        lut = config['lut'],
+        lut = lambda wildcards: config['segs'][wildcards.method]['lut'],
     params:
         img_size = config['size'],
         coords = get_coords,
