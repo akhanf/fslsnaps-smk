@@ -44,16 +44,11 @@ def get_coords(wildcards, input):
     # let's stick with centroids in ras space for now 
 
     centroid_vec = np.vstack((centroid,np.array([1.0]))) # concat 1 to make homog 4x1 vec
-#    print(centroid_vec)
     centroid_vec_voxspace = np.linalg.inv(vox2ras) @ centroid_vec
-#    print(centroid_vec_voxspace)
     offset_vec = np.vstack((float(wildcards.xoffset),float(wildcards.yoffset),float(wildcards.zoffset),1.0))
-#    print(offset_vec)
     coords_voxspace = centroid_vec_voxspace.copy()
     coords_voxspace[:3,0] = centroid_vec_voxspace[:3,0] + offset_vec[:3,0] #skip the homog coord
-#    print(coords_voxspace)
     coords_ras = np.squeeze(vox2ras @ coords_voxspace)
-#    print(coords_ras)
     coords_string = f'{coords_ras[0]} {coords_ras[1]} {coords_ras[2]}' 
     return coords_string
 
@@ -66,7 +61,17 @@ rule all:
                 method='{method}',
                 include_subject_dir=False),
             hemi=inputs['seg'].input_lists['hemi'],
-            method=config['segs'].keys())
+            method=config['segs'].keys()),
+
+rule all_methods_flipbook:
+    input:
+        expand(
+            bids(root='results',
+                suffix='methodsflipbook.pdf',
+                hemi='{hemi}',
+                include_subject_dir=False),
+            hemi=inputs['seg'].input_lists['hemi'],
+        )
 
 
 
@@ -111,11 +116,71 @@ rule create_pdf:
     shell:
         'convert {input} {output}'
 
+def get_inputs_create_methods_pdf(wildcards):
+    
+    pngs = sorted(expand(
+                    bids(root='results',
+                        suffix='methodsmontage.png',
+                        **inputs['seg'].input_wildcards),
+                    zip,
+                    **filter_list(inputs['seg'].input_zip_lists,wildcards)
+                    ))
+    return pngs
+ 
+rule create_methods_pdf:
+    input:
+        get_inputs_create_methods_pdf
+
+    output:
+        bids(root='results',
+                suffix='methodsflipbook.pdf',
+                hemi='{hemi}',
+                include_subject_dir=False)
+    shell:
+        'convert {input} {output}'
+
+
 
 
 
 #TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
 
+
+
+rule montage_allviews_allmethods:
+    input:
+        expand( # first row is MRI only (opacity 0)
+            bids(root='results',
+                suffix='slicemontageallviews.png',
+                opacity='{opacity}',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
+            opacity='0',
+            method=list(config['segs'].keys())[0],
+            allow_missing=True),
+
+        expand( # then, each method as a row
+            bids(root='results',
+                suffix='slicemontageallviews.png',
+                opacity='{opacity}',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
+            opacity=config['opacity'],
+            method=config['segs'].keys(),
+            allow_missing=True)
+    params:
+        tile=lambda wildcards, input: '1x{N}'.format(N=len(input)),
+        geometry="'1x1+0+0<'" 
+    output:
+        bids(root='results',
+            suffix='methodsmontage.png',
+            **inputs['seg'].input_wildcards),
+    shadow: 'minimal'
+    shell:
+        "montage {input}  -geometry {params.geometry} -tile {params.tile} temp.png && " 
+        "convert temp.png -background black -gravity North -splice 0x40 -fill white -pointsize 30 -annotate +0+2 '{wildcards}'"
+         " {output}"
+        
 
 
 
@@ -170,44 +235,14 @@ rule montage_seg_with_mri:
 
 
 
-
-rule montage_views_single_row:
-    input:
-        expand(
-            bids(root='results',
-            suffix='slicemontage.png',
-            desc='{desc}',
-            opacity='{opacity}',
-            method='{method}',
-            **inputs['seg'].input_wildcards),
-                desc=config['slice_montages'].keys(),
-                allow_missing=True)
-    params:
-        tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
-        geometry="'1x1+0+0<'"
- 
-    output:
-            bids(root='results',
-            suffix='viewrowmontage.png',
-            opacity='{opacity}',
-            method='{method}',
-            **inputs['seg'].input_wildcards),
-    shell:
-        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
-
- 
-        
-def get_input_slices(wildcards):
-
-    
-       
-    
-    start = config['slice_montages'][wildcards.desc]['start']
-    stop = config['slice_montages'][wildcards.desc]['stop']
-    slices = config['slice_montages'][wildcards.desc]['slices']
+def get_slice_offsets(desc):
+   
+    start = config['slice_montages'][desc]['start']
+    stop = config['slice_montages'][desc]['stop']
+    slices = config['slice_montages'][desc]['slices']
     offset = [f'{num}' for num in np.linspace(start,stop,slices)]
 
-    ax = config['slice_montages'][wildcards.desc]['axis']
+    ax = config['slice_montages'][desc]['axis']
 
     if ax == 'x':
         x = offset
@@ -222,7 +257,12 @@ def get_input_slices(wildcards):
         y = 0
         z = offset
 
-   
+    return (x,y,z)
+       
+def get_input_slices(wildcards):
+
+    (x,y,z) = get_slice_offsets(wildcards.desc)
+  
     return expand(
                 bids(root='results',suffix='snap.png',
                 x='{x}',
@@ -237,8 +277,48 @@ def get_input_slices(wildcards):
                     z=z,
                     allow_missing=True)
 
+def get_input_slices_allviews(wildcards):
 
- 
+    slices = []
+    for view in config['slice_montages'].keys():
+    
+        (x,y,z) = get_slice_offsets(view)
+        slices.extend(
+            expand(
+                bids(root='results',suffix='snap.png',
+                x='{x}',
+                y='{y}',
+                z='{z}',
+                desc='{desc}',
+                opacity='{opacity}',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
+                    x=x,
+                    y=y,
+                    z=z,
+                    desc=view,
+                    allow_missing=True)
+        )
+    return slices
+
+
+
+rule montage_slices_allviews:
+    input:
+        slices = get_input_slices_allviews
+    params:
+        tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
+        geometry="'1x1+0+0<'" 
+    output:
+        bids(root='results',
+            suffix='slicemontageallviews.png',
+            opacity='{opacity}',
+            method='{method}',
+            **inputs['seg'].input_wildcards)
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+
+
 rule montage_slices:
     input:
         slices = get_input_slices
