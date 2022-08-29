@@ -3,9 +3,27 @@ participant_label:
   - '7607477'
 
 
-
-method: 'ashs' # <-- this name ends up in your output bids files as the method -- only use letters & numbers (no underscores, hyphens)
-lut: 'resources/ashs.lut'
+segs:
+  hippunfoldT1:
+    path: &defaultseg
+      '../hippunfold_atlasfix/hippunfold/sub-{subject}/anat/sub-{subject}_hemi-{hemi}_space-cropT2w_desc-subfields_atlas-bigbrain_dseg.nii.gz'  
+    lut: 'resources/hippunfold.lut'
+    hemi_convert: #needs to be here even if no change
+      L: L
+      R: R
+  ashs: 
+    path: '../ashs/sub-{subject}/final/{subject}_{hemi}_lfseg_corr_nogray.nii.gz'
+    lut: 'resources/ashs.lut'
+    hemi_convert:
+      L: left
+      R: right
+  freesurfer: 
+    path: '../freesurfer/sub-{subject}/mri/{hemi}.hippoAmygLabels-T2.v21.FS60.space-T2w.nii.gz'
+    lut: 'resources/freesurfer.lut'
+    hemi_convert:
+      L: lh
+      R: rh
+  
 
 
 pybids_inputs:
@@ -28,8 +46,7 @@ pybids_inputs:
       - subject
       - session
       - hemi
-    custom_path:
-      '../ashs/sub-{subject}/final/{subject}_{hemi}_lfseg_corr_nogray.nii.gz'
+    custom_path: *defaultseg
 
 
 # we use np.linspace to get the slices to use
@@ -47,13 +64,13 @@ slice_montages:
   coronal:
     axis: 'y'
     zoom: 2200
-    start: -30
+    start: 0
     stop: +30
-    slices: 5
+    slices: 3
   sagittal:
     axis: 'x'
     zoom: 2000
-    start: -30
-    stop: +30
-    slices: 5
+    start: 0
+    stop: 0
+    slices: 1
 
