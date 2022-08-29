@@ -530,10 +530,24 @@ rule convert_lut_fsl_to_itksnap:
             df[col] = 1
         df.to_csv(output.lut,sep=' ',columns=['R','G','B','A','vis','mesh','name'],header=False,quoting=csv.QUOTE_NONNUMERIC)
 
+
+rule retain_only_lut_labels:
+    input:
+        seg = get_seg,
+        lut = 'resources/{method}_itksnap.lut'
+    output:
+        seg = bids(root='results',suffix='dseg.nii.gz',
+                method='{method}',
+                **inputs['seg'].input_wildcards)
+    shell:
+        "c3d {input.seg} -retain-labels `cat {input.lut} | awk '{{print $1}}'` -o {output.seg}"
+    
 rule gen_cmd_vis_itksnap:
     """for visualizing 3d surface renderings with the specified lut"""
     input:
-        seg = get_seg,
+        seg = bids(root='results',suffix='dseg.nii.gz',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
         lut = 'resources/{method}_itksnap.lut',
         mri = inputs['mri'].input_path, 
     output:
