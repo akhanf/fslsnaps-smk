@@ -73,6 +73,16 @@ rule all_methods_flipbook:
             hemi=inputs['seg'].input_lists['hemi'],
         )
 
+rule all_itksnap:
+    input:
+        expand(
+            expand(
+            bids(root='results',suffix='itksnap.sh',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
+                method=config['segs'].keys(),allow_missing=True),
+                zip,
+                **inputs['seg'].input_zip_lists)
 
 
 rule all_centroid:
