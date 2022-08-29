@@ -142,7 +142,6 @@ rule create_methods_pdf:
 
 
 
-
 #TODO: could easily make an animated rule (from opacity 0 to 100 to 0)
 
 
@@ -318,6 +317,47 @@ rule montage_slices_allviews:
     shell:
         'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
 
+rule montage_slices_allviewscol:
+    input:
+        slices = get_input_slices_allviews
+    params:
+        tile=lambda wildcards, input: '1x{N}'.format(N=len(input)),
+        geometry="'1x1+0+0<'" 
+    output:
+        bids(root='results',
+            suffix='slicemontageallviewscol.png',
+            opacity='{opacity}',
+            method='{method}',
+            **inputs['seg'].input_wildcards)
+    shell:
+        'montage {input} -geometry {params.geometry} -tile {params.tile} {output}'
+
+rule montage_slices_allviewscol_lr:
+    input:
+        expand(
+            bids(root='results',
+            suffix='slicemontageallviewscol.png',
+            opacity='{opacity}',
+            method='{method}',
+            **inputs['seg'].input_wildcards),
+            hemi=['L','R'], allow_missing=True)
+    params:
+        tile=lambda wildcards, input: '{N}x1'.format(N=len(input)),
+        geometry="'1x1+0+0<'" 
+    output:
+        bids(root='results',
+            suffix='montagelr.png',
+            opacity='{opacity}',
+            method='{method}',
+            subject='{subject}')
+    shell:
+        "montage {input}  -geometry {params.geometry} -tile {params.tile} {output}"
+ 
+        
+                    
+
+
+
 
 rule montage_slices:
     input:
@@ -406,7 +446,8 @@ rule gen_snap:
         label_opacity = '{opacity}',
         displayrange = config['displayrange_percentiles'],
         hide_slices = get_hide_slices,
-        zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom']
+        zoom = lambda wildcards: config['slice_montages'][wildcards.desc]['zoom'],
+        neuroorientation = "--neuroOrientation" if config.get('neurological_orientation',False) == True else ""
     output:
         temp(bids(root='results',suffix='snap.png',
                 x='{xoffset}',
@@ -420,6 +461,7 @@ rule gen_snap:
         "xvfb-run -a fsleyes render -of {output}"
         " --size {params.img_size}"
         " --initialDisplayRange {params.displayrange}"
+        " {params.neuroorientation}"
         " --scene ortho"
         " --worldLoc {params.coords}"
         " --displaySpace {input.mri}"
