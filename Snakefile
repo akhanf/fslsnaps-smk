@@ -73,6 +73,16 @@ rule all_methods_flipbook:
             hemi=inputs['seg'].input_lists['hemi'],
         )
 
+rule all_itksnap:
+    input:
+        expand(
+            expand(
+            bids(root='results',suffix='itksnap.sh',
+                method='{method}',
+                **inputs['seg'].input_wildcards),
+                method=config['segs'].keys(),allow_missing=True),
+                zip,
+                **inputs['seg'].input_zip_lists)
 
 
 rule all_centroid:
@@ -504,5 +514,34 @@ rule gen_snap:
         " --outlineWidth 0"
         " --volume 0"
 
+
+rule convert_lut_fsl_to_itksnap:
+    input:
+        lut = lambda wildcards: config['segs'][wildcards.method]['lut'],
+    output:
+        lut = 'resources/{method}_itksnap.lut'
+    run:
+        import pandas as pd
+        import csv
+        df = pd.read_table(input.lut,header=None,index_col='label',sep='\s+',names=['label','R','G','B','name'])
+        for col in ['R','G','B']:
+            df[col] = (df[col]*255).astype('uint8')
+        for col in ['A','vis','mesh']:
+            df[col] = 1
+        df.to_csv(output.lut,sep=' ',columns=['R','G','B','A','vis','mesh','name'],header=False,quoting=csv.QUOTE_NONNUMERIC)
+
+rule gen_cmd_vis_itksnap:
+    """for visualizing 3d surface renderings with the specified lut"""
+    input:
+        seg = get_seg,
+        lut = 'resources/{method}_itksnap.lut',
+        mri = inputs['mri'].input_path, 
+    output:
+        bids(root='results',suffix='itksnap.sh',
+                method='{method}',
+                **inputs['seg'].input_wildcards)
+    shell:
+        "echo itksnap -g {input.seg} -s {input.seg} -l {input.lut} -o {input.mri} > {output} && "
+        "chmod a+x {output}"
 
 
